@@ -33,7 +33,26 @@ class HTTPResponse(object):
         self.body = body
 
 class HTTPClient(object):
-    #def get_host_port(self,url):
+    def get_host_port(self,urlparse_results):
+        # get host
+        hostname = urlparse_results.hostname
+
+        try:
+            host = socket.gethostbyname(hostname)
+        except socket.gaierror:
+            print('Hostname could not be resolved. Exiting')
+            sys.exit()
+
+        # get port
+        try:
+            port = urlparse_results.port
+
+            if port is None:
+                port = 80
+        except ValueError:
+            port = 80
+        
+        return host, port
 
     def connect(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -41,13 +60,14 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+        return int(data.split(' ')[1])
 
     def get_headers(self,data):
-        return None
+        headers = data.split('\r\n\r\n')[0]
+        return headers.split('\r\n')[1:]
 
     def get_body(self, data):
-        return None
+        return data.split('\r\n\r\n')[1]
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -68,13 +88,55 @@ class HTTPClient(object):
         return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        urlparse_results = urllib.parse.urlparse(url)
+        host, port = self.get_host_port(urlparse_results)
+
+        hostname = urlparse_results.hostname
+
+        path = urlparse_results.path
+        if not path:
+            path = '/'
+        
+        payload = f'GET {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\n\r\n'
+
+        self.connect(host, port)
+        self.sendall(payload)
+        data = self.recvall(self.socket)
+        self.close()
+        
+        code = self.get_code(data)
+        body = self.get_body(data)
+        print(self.get_headers(data), '\n')
+
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
+        urlparse_results = urllib.parse.urlparse(url)
+        host, port = self.get_host_port(urlparse_results)
+
+        hostname = urlparse_results.hostname
+
+        path = urlparse_results.path
+        if not path:
+            path = '/'
+        
+        if args is None:
+            params = ''
+        else:
+            # cite: https://stackoverflow.com/a/50022671
+            params = urllib.parse.urlencode(args)
+        
+        payload = f'POST {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {len(params)}\r\n\r\n{params}\r\n\r\n'
+
+        self.connect(host, port)
+        self.sendall(payload)
+        data = self.recvall(self.socket)
+        self.close()
+        
+        code = self.get_code(data)
+        body = self.get_body(data)
+        print(self.get_headers(data), '\n')
+
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
