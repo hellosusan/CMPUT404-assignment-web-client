@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 # Copyright 2016 Abram Hindle, https://github.com/tywtyw2002, and https://github.com/treedust
+# Copyright 2022 Susan Trang
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +41,7 @@ class HTTPClient(object):
         try:
             host = socket.gethostbyname(hostname)
         except socket.gaierror:
-            print('Hostname could not be resolved. Exiting')
+            print('Hostname could not be resolved !')
             sys.exit()
 
         # get port
@@ -97,7 +98,7 @@ class HTTPClient(object):
         if not path:
             path = '/'
         
-        payload = f'GET {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\n\r\n'
+        payload = f'GET {path} HTTP/1.1\r\nHost: {hostname}\r\nAccept: */*\r\nConnection: close\r\n\r\n'
 
         self.connect(host, port)
         self.sendall(payload)
@@ -106,7 +107,8 @@ class HTTPClient(object):
         
         code = self.get_code(data)
         body = self.get_body(data)
-        print(self.get_headers(data), '\n')
+        print('The response body:\n', body)
+        print('\n\n')
 
         return HTTPResponse(code, body)
 
@@ -126,7 +128,7 @@ class HTTPClient(object):
             # cite: https://stackoverflow.com/a/50022671
             params = urllib.parse.urlencode(args)
         
-        payload = f'POST {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {len(params)}\r\n\r\n{params}\r\n\r\n'
+        payload = f'POST {path} HTTP/1.1\r\nHost: {hostname}\r\nAccept: */*\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {len(params)}\r\n\r\n{params}'
 
         self.connect(host, port)
         self.sendall(payload)
@@ -135,7 +137,8 @@ class HTTPClient(object):
         
         code = self.get_code(data)
         body = self.get_body(data)
-        print(self.get_headers(data), '\n')
+        print('The response body:\n', body)
+        print('\n\n')
 
         return HTTPResponse(code, body)
 
